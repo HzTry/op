@@ -21,10 +21,12 @@ void *InputHook::old_address;
 //
 opMouseState InputHook::m_mouseState;
 bool InputHook::is_hooked = false;
+bool InputHook::is_lock_mouse = true;
 
 WNDPROC gRawWindowProc = 0;
 std::vector<void *> gDinputVtb;
 std::vector<void *> gDinputVtbRaw;
+void* rawGetMessage;
 
 const int indexAcquire = 7;
 const int indexGetDeviceState = 9;
@@ -37,8 +39,11 @@ HRESULT __stdcall hkAcquire(IDirectInputDevice8W *this_);
 HRESULT __stdcall hkPoll(IDirectInputDevice8W *this_);
 
 HRESULT __stdcall hkGetDeviceState(IDirectInputDevice8W *this_, DWORD size, LPVOID ptr);
+BOOL __stdcall hkGetMessage(LPMSG lpMsg,HWND hWnd,UINT wMsgFilterMin,UINT wMsgFilterMax);
 
 LRESULT CALLBACK opWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
+
+bool isMouseMessage(UINT message);
 
 int InputHook::setup(HWND hwnd_, int input_type_)
 {
@@ -46,35 +51,34 @@ int InputHook::setup(HWND hwnd_, int input_type_)
         return 0;
     opEnv::m_showErrorMsg = 2; //write data to file
     setlog("SetInputHook");
-    if (getDinputVtb() == 1)
-    {
-        MH_Initialize();
-        MH_CreateHook(
-            gDinputVtb[indexGetDeviceState],
-            hkGetDeviceState,
-            &gDinputVtbRaw[indexGetDeviceState]);
-        MH_CreateHook(
-            gDinputVtb[indexPoll],
-            hkPoll,
-            &gDinputVtbRaw[indexPoll]);
-        MH_EnableHook(NULL);
-        gRawWindowProc = reinterpret_cast<WNDPROC>(SetWindowLongPtrA(hwnd_, GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(opWndProc)));
-        InputHook::input_hwnd = hwnd_;
+
+    bool ret = false;
+    if (input_type_ == INPUT_TYPE::IN_DX) {
+        ret = mouseDxHook(hwnd_, input_type_);
     }
-    else
-    {
-        setlog("getDinputVtb false!");
+    else if (input_type_ == INPUT_TYPE::IN_WINDOWS) {
+        ret = mouseWindowHook(hwnd_, input_type_);
     }
 
-    return gRawWindowProc ? 1 : -1;
+    if (ret) {
+        InputHook::input_hwnd = hwnd_;
+        InputHook::input_type = input_type_;
+    }
+
+    return ret ? 1 : -1;
+
 }
+
 int InputHook::release()
 {
     LONG_PTR ptr = 0;
-    if (gRawWindowProc)
-    {
+    if (InputHook::input_type == INPUT_TYPE::IN_DX || InputHook::input_type == INPUT_TYPE::IN_WINDOWS) {
         MH_RemoveHook(NULL);
         MH_Uninitialize();
+    }
+
+    if (gRawWindowProc)
+    {
         ptr = SetWindowLongPtrA(InputHook::input_hwnd, GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(gRawWindowProc));
     }
     return ptr ? 1 : 0;
@@ -90,6 +94,37 @@ void InputHook::upDataPos(LPARAM lp, int key, bool down)
     {
         m_mouseState.abButtons[key] = down ? 0x80 : 0;
     }
+}
+
+bool InputHook::mouseDxHook(HWND hwnd, int input_type)
+{
+    if (getDinputVtb() == 1)
+    {
+        MH_Initialize();
+        MH_CreateHook(
+            gDinputVtb[indexGetDeviceState],
+            hkGetDeviceState,
+            &gDinputVtbRaw[indexGetDeviceState]);
+        MH_CreateHook(
+            gDinputVtb[indexPoll],
+            hkPoll,
+            &gDinputVtbRaw[indexPoll]);
+        MH_EnableHook(NULL);
+        gRawWindowProc = reinterpret_cast<WNDPROC>(SetWindowLongPtrA(hwnd, GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(opWndProc)));
+    }
+    else
+    {
+        setlog("getDinputVtb false!");
+    }
+
+    return gRawWindowProc ? 1 : -1;
+}
+
+bool InputHook::mouseWindowHook(HWND hwnd, int input_type)
+{
+    MH_Initialize();
+    MH_CreateHook(&GetMessage, hkGetMessage, &rawGetMessage);
+    return MH_EnableHook(NULL) == MH_OK;
 }
 
 int getDinputVtb()
@@ -159,6 +194,36 @@ HRESULT __stdcall hkAcquire(IDirectInputDevice8W *this_)
 HRESULT __stdcall hkPoll(IDirectInputDevice8W *this_)
 {
     return DI_OK;
+}
+
+BOOL __stdcall hkGetMessage(LPMSG lpMsg, HWND hWnd, UINT wMsgFilterMin, UINT wMsgFilterMax) {
+    using GetMessage_t = decltype(hkGetMessage);
+    BOOL ret = reinterpret_cast<GetMessage_t*>(rawGetMessage)(lpMsg, hWnd, wMsgFilterMin, wMsgFilterMax);
+
+    UINT message = lpMsg->message;
+
+    if (message == OP_WM_MOUSEMOVE || message == OP_WM_LBUTTONUP || message == OP_WM_LBUTTONDOWN ||
+        message == OP_WM_MBUTTONDOWN || message == OP_WM_MBUTTONUP || message == OP_WM_RBUTTONDOWN ||
+        message == OP_WM_RBUTTONUP || message == OP_WM_MOUSEWHEEL) {
+        lpMsg->message = message - WM_USER;
+    }
+
+    if (InputHook::is_lock_mouse) {
+        if (isMouseMessage(message)) {
+            do {
+                ret = reinterpret_cast<GetMessage_t*>(rawGetMessage)(lpMsg, hWnd, wMsgFilterMin, wMsgFilterMax);
+                message = lpMsg->message;
+            } while (ret && isMouseMessage(message));
+        }
+    }
+    return ret;
+}
+
+bool isMouseMessage(UINT message) {
+    return message == WM_MOUSEMOVE || message == WM_LBUTTONUP || message == WM_LBUTTONDOWN ||
+        message == WM_MBUTTONDOWN || message == WM_MBUTTONUP || message == WM_RBUTTONDOWN ||
+        message == WM_RBUTTONUP || message == WM_MOUSEWHEEL || message == WM_LBUTTONDBLCLK ||
+        message == WM_RBUTTONDBLCLK || message == WM_MBUTTONDBLCLK;
 }
 
 void EndianSwap(char *pData, int startIndex, int length)

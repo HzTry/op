@@ -81,11 +81,12 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/libop/com/op_i.h")
     ## tools项目
     add_subdirectory("tools")
     ## 测试项目
-    add_subdirectory("tests")
+    add_subdirectory("tests") 
 endif()
 ## swig 项目
 if(build_swig_py)
-    add_subdirectory("swig")
+    #add_subdirectory("swig")
 endif()
 
 
+ 

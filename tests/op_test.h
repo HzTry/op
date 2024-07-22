@@ -221,13 +221,22 @@ class test {
     return 0;
   }
   void do_test() {
-    
-    // m_op->FindWindow()
-    TestForeground();
+      long hwnd = 0, subhwnd = 0, ret = 0;
+      m_op->FindWindow(L"notepad", L"", &hwnd);
+      m_op->FindWindowEx(hwnd, L"Edit", L"", &subhwnd);
 
-    TestNox(m_op);
-    TestLD(m_op);
-    BindMine(m_op);
+      m_op->BindWindow(subhwnd, L"normal", L"windows", L"normal", 0, &ret);
+      
+      std::getchar();
+
+      m_op->UnBindWindow(&ret);
+
+    // m_op->FindWindow()
+    //TestForeground();
+
+    //TestNox(m_op);
+    //TestLD(m_op);
+    //BindMine(m_op);
   }
 
  protected:

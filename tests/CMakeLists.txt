@@ -8,7 +8,7 @@ ADD_DEFINITIONS(-D _CMAKE_BUILD)
 SET(SRC_FILES "main.cpp"
 "../libop/com/op_i.c")
 
-include_directories( 
+include_directories(  
   ./
   ../libop/3rd_party/include/3rd_party
 ) 
@@ -21,4 +21,4 @@ IF(CMAKE_CL_64)
   install(TARGETS op_test  DESTINATION "${PROJECT_SOURCE_DIR}/bin/x64")
 ELSE(CMAKE_CL_64)
   install(TARGETS op_test  DESTINATION "${PROJECT_SOURCE_DIR}/bin/x86")
-ENDIF(CMAKE_CL_64)
+ENDIF(CMAKE_CL_64) 

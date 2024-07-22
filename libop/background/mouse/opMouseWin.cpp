@@ -2,6 +2,10 @@
 #include "opMouseWin.h"
 #include "./core/globalVar.h"
 #include "./core/helpfunc.h"
+#include "BlackBone/Process/Process.h"
+#include "BlackBone/Process/RPC/RemoteFunction.hpp"
+#include "../core/opEnv.h"
+#include "../HOOK/opMessage.h"
 
 float opMouseWin::getDPI() {
 	HDC hdcScreen;
@@ -45,11 +49,129 @@ opMouseWin::~opMouseWin()
 long opMouseWin::Bind(HWND h,int mode) {
 	_hwnd = h;
 	_mode = mode;
+	DWORD id;
+	::GetWindowThreadProcessId(_hwnd, &id);
+
+	//attach 进程
+	blackbone::Process proc;
+	NTSTATUS hr;
+
+	hr = proc.Attach(id);
+	long ret = 0;
+	if (NT_SUCCESS(hr))
+	{
+		wstring dllname = opEnv::getOpName();
+		//检查是否与插件相同的32/64位,如果不同，则使用另一种dll
+		BOOL is64 = proc.modules().GetMainModule()->type == blackbone::eModType::mt_mod64;
+		if (is64 != OP64)
+		{
+			dllname = is64 ? L"op_x64.dll" : L"op_x86.dll";
+		}
+
+		bool injected = false;
+		//判断是否已经注入
+		auto _dllptr = proc.modules().GetModule(dllname);
+		auto mods = proc.modules().GetAllModules();
+		if (_dllptr)
+		{
+			injected = true;
+		}
+		else
+		{
+			wstring opFile = opEnv::getBasePath() + L"\\" + dllname;
+			if (::PathFileExistsW(opFile.data()))
+			{
+				auto iret = proc.modules().Inject(opFile);
+				injected = (iret ? true : false);
+			}
+			else
+			{
+				setlog(L"file:<%s> not exists!", opFile.data());
+			}
+		}
+		if (injected)
+		{
+			using my_func_t = long(__stdcall*)(HWND, int);
+			auto PSetInputHook = blackbone::MakeRemoteFunction<my_func_t>(proc, dllname, "SetInputHook");
+			if (PSetInputHook)
+			{
+				//setlog("after MakeRemoteFunction");
+				auto cret = PSetInputHook(_hwnd, _mode);
+				//setlog("after pSetXHook");
+				ret = cret.result();
+				//setlog("after result");
+			}
+			else
+			{
+				setlog(L"remote function 'SetInputHook' not found.");
+			}
+		}
+		else
+		{
+			setlog(L"Inject false.");
+		}
+	}
+	else
+	{
+		setlog(L"attach false.");
+	}
+
+	proc.Detach();
+	//setlog("after Detach");
+
 	return 1;
 }
 
 long opMouseWin::UnBind() {
-	_hwnd = 0; _mode = 0;
+	if (_mode != INPUT_TYPE::IN_WINDOWS)
+	{
+		_hwnd = 0;
+		_mode = 0;
+		return 1;
+	}
+
+	DWORD id;
+	::GetWindowThreadProcessId(_hwnd, &id);
+
+	//attach 进程
+	blackbone::Process proc;
+	NTSTATUS hr;
+
+	hr = proc.Attach(id);
+	long ret = 0;
+	if (NT_SUCCESS(hr))
+	{
+		wstring dllname = opEnv::getOpName();
+		//检查是否与插件相同的32/64位,如果不同，则使用另一种dll
+		BOOL is64 = proc.modules().GetMainModule()->type == blackbone::eModType::mt_mod64;
+		if (is64 != OP64)
+		{
+			dllname = is64 ? L"op_x64.dll" : L"op_x86.dll";
+		}
+		using my_func_t = long(__stdcall*)();
+		auto pReleaseInputHook = blackbone::MakeRemoteFunction<my_func_t>(proc, dllname, "ReleaseInputHook");
+		if (pReleaseInputHook)
+		{
+			//setlog("after MakeRemoteFunction");
+			auto cret = pReleaseInputHook();
+			//setlog("after pSetXHook");
+			ret = cret.result();
+			//setlog("after result");
+		}
+		else
+		{
+			setlog(L"remote function 'ReleaseInputHook' not found.");
+		}
+	}
+	else
+	{
+		setlog(L"attach false.");
+	}
+
+	proc.Detach();
+	//setlog("after Detach");
+	_hwnd = 0;
+	_mode = 0;
 	return 1;
 }
 

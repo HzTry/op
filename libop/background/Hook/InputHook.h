@@ -22,12 +22,15 @@ public:
 	static wchar_t mutex_name[256];
 	static void *old_address;
 	static bool is_hooked;
+	static bool is_lock_mouse;
 	//
 	static int setup(HWND hwnd_, int input_type_);
 	static int release();
 	//LParam is pos,key:-1-2,means null, left mid and right, down means keyState
 	static void upDataPos(LPARAM, int key, bool down);
 	static opMouseState m_mouseState;
+	static bool mouseDxHook(HWND hwnd, int input_type);
+	static bool mouseWindowHook(HWND hwnd, int input_type);
 };
 
 #endif

@@ -109,7 +109,7 @@ bool opDXGI::requestCapture(int x1, int y1, int w, int h, Image& img) {
 	_pmutex->lock();
 	uchar* pshare = _shmem->data<byte>();
 	
-	//½«Êý¾Ý¿½±´µ½Ä¿±ê
+	//ï¿½ï¿½ï¿½ï¿½ï¿½Ý¿ï¿½ï¿½ï¿½ï¿½ï¿½Ä¿ï¿½ï¿½
 	for (int i = 0; i < h; i++) {
 		//memcpy(img.ptr<uchar>(i), pDest + (desc.Height - 1 - i - src_y) * 4 * desc.Width + src_x * 4,
 			//4 * w);
