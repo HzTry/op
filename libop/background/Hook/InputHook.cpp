@@ -8,6 +8,9 @@
 
 #include "dinput.h"
 #include <vector>
+#include "fstream"
+#include "iostream"
+
 
 const GUID OP_IID_IDirectInput8W = {0xBF798031, 0x483A, 0x4DA2, 0xAA, 0x99, 0x5D, 0x64, 0xED, 0x36, 0x97, 0x00};
 const GUID OP_GUID_SysMouse = {0x6F1D2B60, 0xD5A0, 0x11CF, 0xBF, 0xC7, 0x44, 0x45, 0x53, 0x54, 0x00, 0x00};
@@ -27,6 +30,7 @@ WNDPROC gRawWindowProc = 0;
 std::vector<void *> gDinputVtb;
 std::vector<void *> gDinputVtbRaw;
 void* rawGetMessage;
+void* rawPeekPeekMessage;
 
 const int indexAcquire = 7;
 const int indexGetDeviceState = 9;
@@ -40,8 +44,9 @@ HRESULT __stdcall hkPoll(IDirectInputDevice8W *this_);
 
 HRESULT __stdcall hkGetDeviceState(IDirectInputDevice8W *this_, DWORD size, LPVOID ptr);
 BOOL __stdcall hkGetMessage(LPMSG lpMsg,HWND hWnd,UINT wMsgFilterMin,UINT wMsgFilterMax);
-
-LRESULT CALLBACK opWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
+BOOL __stdcall hkPeekMessage(LPMSG lpMsg, HWND hWnd, UINT wMsgFilterMin, UINT wMsgFilterMax,UINT wRemoveMsg);
+LRESULT CALLBACK opDxMouseWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
+LRESULT CALLBACK opWinMouseWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
 
 bool isMouseMessage(UINT message);
 
@@ -110,7 +115,7 @@ bool InputHook::mouseDxHook(HWND hwnd, int input_type)
             hkPoll,
             &gDinputVtbRaw[indexPoll]);
         MH_EnableHook(NULL);
-        gRawWindowProc = reinterpret_cast<WNDPROC>(SetWindowLongPtrA(hwnd, GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(opWndProc)));
+        gRawWindowProc = reinterpret_cast<WNDPROC>(SetWindowLongPtrA(hwnd, GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(opDxMouseWndProc)));
     }
     else
     {
@@ -124,7 +129,15 @@ bool InputHook::mouseWindowHook(HWND hwnd, int input_type)
 {
     MH_Initialize();
     MH_CreateHook(&GetMessage, hkGetMessage, &rawGetMessage);
-    return MH_EnableHook(NULL) == MH_OK;
+    MH_CreateHook(&PeekMessage, hkPeekMessage, &rawPeekPeekMessage);
+    auto ret = MH_EnableHook(NULL);
+    if (ret == MH_OK) {
+        gRawWindowProc = reinterpret_cast<WNDPROC>(SetWindowLongPtrA(hwnd, GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(opWinMouseWndProc)));
+    }
+    //WCHAR buffe[256];
+    //wsprintf(buffe, L"%d", ret);
+    //MessageBox(0, buffe, L"tip", MB_OK);
+    return ret == MH_OK;
 }
 
 int getDinputVtb()
@@ -201,13 +214,16 @@ BOOL __stdcall hkGetMessage(LPMSG lpMsg, HWND hWnd, UINT wMsgFilterMin, UINT wMs
     BOOL ret = reinterpret_cast<GetMessage_t*>(rawGetMessage)(lpMsg, hWnd, wMsgFilterMin, wMsgFilterMax);
 
     UINT message = lpMsg->message;
-
     if (message == OP_WM_MOUSEMOVE || message == OP_WM_LBUTTONUP || message == OP_WM_LBUTTONDOWN ||
         message == OP_WM_MBUTTONDOWN || message == OP_WM_MBUTTONUP || message == OP_WM_RBUTTONDOWN ||
         message == OP_WM_RBUTTONUP || message == OP_WM_MOUSEWHEEL) {
         lpMsg->message = message - WM_USER;
     }
-
+    std::ofstream file("D:\\Project\\C++\\op\\out\\build\\x64-Debug\\tests\\output.txt", std::ios::app);
+    if (file.is_open()) {
+        file << "getmessage hook: " << message << std::endl;
+        file.close();
+    }
     if (InputHook::is_lock_mouse) {
         if (isMouseMessage(message)) {
             do {
@@ -216,6 +232,30 @@ BOOL __stdcall hkGetMessage(LPMSG lpMsg, HWND hWnd, UINT wMsgFilterMin, UINT wMs
             } while (ret && isMouseMessage(message));
         }
     }
+    return ret;
+}
+
+BOOL __stdcall hkPeekMessage(LPMSG lpMsg, HWND hWnd, UINT wMsgFilterMin, UINT wMsgFilterMax, UINT wRemoveMsg) {
+    using PeekMessage_t = decltype(hkPeekMessage);
+
+    auto ret = reinterpret_cast<PeekMessage_t*>(rawPeekPeekMessage)(lpMsg, hWnd, wMsgFilterMin, wMsgFilterMax, wRemoveMsg);
+    if (ret == TRUE) {
+        UINT message = lpMsg->message;
+        if (message == OP_WM_MOUSEMOVE || message == OP_WM_LBUTTONUP || message == OP_WM_LBUTTONDOWN ||
+            message == OP_WM_MBUTTONDOWN || message == OP_WM_MBUTTONUP || message == OP_WM_RBUTTONDOWN ||
+            message == OP_WM_RBUTTONUP || message == OP_WM_MOUSEWHEEL) {
+            lpMsg->message = message - WM_USER;
+        }
+
+        if (InputHook::is_lock_mouse) {
+            if (isMouseMessage(message)) {
+                return FALSE;
+            }
+        }
+    }
+
+
+
     return ret;
 }
 
@@ -284,8 +324,13 @@ HRESULT __stdcall hkGetDeviceState(IDirectInputDevice8W *this_, DWORD size, LPVO
     }
 }
 
-LRESULT CALLBACK opWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
+LRESULT CALLBACK opDxMouseWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
+    std::ofstream file("D:\\Project\\C++\\op\\out\\build\\x64-Debug\\tests\\output.txt", std::ios::app);
+    if (file.is_open()) {
+        file << "proc message: " << message << std::endl;
+        file.close();
+    }
     setlog("%04X message", message);
     switch (message)
     {
@@ -324,5 +369,15 @@ LRESULT CALLBACK opWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam
         setlog("OP_WM_MOUSEWHEEL message");
         break;
     }
+    return CallWindowProcA(gRawWindowProc, InputHook::input_hwnd, message, wParam, lParam);
+}
+
+LRESULT CALLBACK opWinMouseWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {
+    if (message == OP_WM_MOUSEMOVE || message == OP_WM_LBUTTONUP || message == OP_WM_LBUTTONDOWN ||
+        message == OP_WM_MBUTTONDOWN || message == OP_WM_MBUTTONUP || message == OP_WM_RBUTTONDOWN ||
+        message == OP_WM_RBUTTONUP || message == OP_WM_MOUSEWHEEL) {
+        message = message - WM_USER;
+    }
+
     return CallWindowProcA(gRawWindowProc, InputHook::input_hwnd, message, wParam, lParam);
 }

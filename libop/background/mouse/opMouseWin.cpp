@@ -237,7 +237,7 @@ long opMouseWin::MoveTo(int x, int y) {
 		break;
 	}
 	case INPUT_TYPE::IN_WINDOWS: {
-		ret = ::SendMessageTimeout(_hwnd, WM_MOUSEMOVE, 0, MAKELPARAM(x, y), SMTO_BLOCK, 2000, nullptr);
+		ret = ::SendMessageTimeout(_hwnd, OP_WM_MOUSEMOVE, 0, MAKELPARAM(x, y), SMTO_BLOCK, 2000, nullptr);
 		break;
 	}
 	}
@@ -272,9 +272,9 @@ long opMouseWin::LeftClick() {
 	}
 
 	case INPUT_TYPE::IN_WINDOWS: {
-		ret = ::SendMessageTimeout(_hwnd, WM_LBUTTONDOWN, 0, MAKELPARAM(_x, _y), SMTO_BLOCK, 2000, nullptr);
+		ret = ::SendMessageTimeout(_hwnd, OP_WM_LBUTTONDOWN, 0, MAKELPARAM(_x, _y), SMTO_BLOCK, 2000, nullptr);
 		::Delay(MOUSE_WINDOWS_DELAY);
-		ret = ::SendMessageTimeout(_hwnd, WM_LBUTTONUP, 0, MAKELPARAM(_x, _y), SMTO_BLOCK, 2000, nullptr);
+		ret = ::SendMessageTimeout(_hwnd, OP_WM_LBUTTONUP, 0, MAKELPARAM(_x, _y), SMTO_BLOCK, 2000, nullptr);
 		///ret=::PostMessage(_hwnd, WM_LBUTTONDOWN, MK_LBUTTON, MAKELPARAM(_x, _y));
 		//ret = ::SendMessageTimeout(_hwnd, WM_LBUTTONDOWN, MK_LBUTTON, MAKELPARAM(_x, _y), SMTO_BLOCK, 2000, nullptr);
 		//ret = ::SendNotifyMessage(_hwnd, WM_LBUTTONDOWN, MK_LBUTTON, MAKELPARAM(_x, _y));
@@ -319,7 +319,7 @@ long opMouseWin::LeftDown() {
 	}
 
 	case INPUT_TYPE::IN_WINDOWS: {
-		ret = ::SendMessageTimeout(_hwnd, WM_LBUTTONDOWN, MK_LBUTTON, MAKELPARAM(_x, _y), SMTO_BLOCK, 2000, nullptr);
+		ret = ::SendMessageTimeout(_hwnd, OP_WM_LBUTTONDOWN, MK_LBUTTON, MAKELPARAM(_x, _y), SMTO_BLOCK, 2000, nullptr);
 		break;
 	}
 	}
@@ -340,7 +340,7 @@ long opMouseWin::LeftUp() {
 	}
 
 	case INPUT_TYPE::IN_WINDOWS: {
-		ret = ::SendMessageTimeout(_hwnd, WM_LBUTTONUP, MK_LBUTTON, MAKELPARAM(_x, _y), SMTO_BLOCK, 2000, nullptr);
+		ret = ::SendMessageTimeout(_hwnd, OP_WM_LBUTTONUP, MK_LBUTTON, MAKELPARAM(_x, _y), SMTO_BLOCK, 2000, nullptr);
 		break;
 	}
 	}
@@ -377,7 +377,7 @@ long opMouseWin::MiddleDown() {
 	}
 
 	case INPUT_TYPE::IN_WINDOWS: {
-		ret = ::SendMessageTimeout(_hwnd, WM_MBUTTONDOWN, MK_MBUTTON, MAKELPARAM(_x, _y), SMTO_BLOCK, 2000, nullptr);
+		ret = ::SendMessageTimeout(_hwnd, OP_WM_MBUTTONDOWN, MK_MBUTTON, MAKELPARAM(_x, _y), SMTO_BLOCK, 2000, nullptr);
 		break;
 	}
 
@@ -399,7 +399,7 @@ long opMouseWin::MiddleUp() {
 	}
 
 	case INPUT_TYPE::IN_WINDOWS: {
-		ret = ::SendMessageTimeout(_hwnd, WM_MBUTTONUP, MK_MBUTTON, MAKELPARAM(_x, _y), SMTO_BLOCK, 2000, nullptr);
+		ret = ::SendMessageTimeout(_hwnd, OP_WM_MBUTTONUP, MK_MBUTTON, MAKELPARAM(_x, _y), SMTO_BLOCK, 2000, nullptr);
 		break;
 	}
 	}
@@ -428,9 +428,9 @@ long opMouseWin::RightClick() {
 	}
 
 	case INPUT_TYPE::IN_WINDOWS: {
-		r1 = ::SendMessageTimeout(_hwnd, WM_RBUTTONDOWN, MK_RBUTTON, MAKELPARAM(_x, _y), SMTO_BLOCK, 2000, nullptr);
+		r1 = ::SendMessageTimeout(_hwnd, OP_WM_RBUTTONDOWN, MK_RBUTTON, MAKELPARAM(_x, _y), SMTO_BLOCK, 2000, nullptr);
 		::Delay(MOUSE_WINDOWS_DELAY);
-		r2 = ::SendMessageTimeout(_hwnd, WM_RBUTTONUP, MK_RBUTTON, MAKELPARAM(_x, _y), SMTO_BLOCK, 2000, nullptr);
+		r2 = ::SendMessageTimeout(_hwnd, OP_WM_RBUTTONUP, MK_RBUTTON, MAKELPARAM(_x, _y), SMTO_BLOCK, 2000, nullptr);
 		ret = r1 == 0 && r2 == 0 ? 1 : 0;
 		break;
 	}
@@ -455,7 +455,7 @@ long opMouseWin::RightDown()
 	}
 	case INPUT_TYPE::IN_WINDOWS:
 	{
-		ret = ::SendMessageTimeout(_hwnd, WM_RBUTTONDOWN, MK_RBUTTON, MAKELPARAM(_x, _y), SMTO_BLOCK, 2000, nullptr);
+		ret = ::SendMessageTimeout(_hwnd, OP_WM_RBUTTONDOWN, MK_RBUTTON, MAKELPARAM(_x, _y), SMTO_BLOCK, 2000, nullptr);
 		break;
 	}
 	}
@@ -476,7 +476,7 @@ long opMouseWin::RightUp() {
 	}
 
 	case INPUT_TYPE::IN_WINDOWS: {
-		ret = ::SendMessageTimeout(_hwnd, WM_RBUTTONUP, MK_RBUTTON, MAKELPARAM(_x, _y), SMTO_BLOCK, 2000, nullptr);
+		ret = ::SendMessageTimeout(_hwnd, OP_WM_RBUTTONUP, MK_RBUTTON, MAKELPARAM(_x, _y), SMTO_BLOCK, 2000, nullptr);
 		break;
 	}
 	}
@@ -521,7 +521,7 @@ long opMouseWin::WheelDown() {
 		POINT pt{};
 		pt.x = _x, pt.y = _y;
 		::ClientToScreen(_hwnd, &pt);
-		ret = ::SendMessageTimeout(_hwnd, WM_MOUSEWHEEL, MAKEWPARAM(0, -WHEEL_DELTA), MAKELPARAM(pt.x, pt.y), SMTO_BLOCK, 2000, nullptr);
+		ret = ::SendMessageTimeout(_hwnd, OP_WM_MOUSEWHEEL, MAKEWPARAM(0, -WHEEL_DELTA), MAKELPARAM(pt.x, pt.y), SMTO_BLOCK, 2000, nullptr);
 		break;
 	}
 	
@@ -547,7 +547,7 @@ long opMouseWin::WheelUp() {
 		POINT pt{};
 		pt.x = _x, pt.y = _y;
 		::ClientToScreen(_hwnd, &pt);
-		ret = ::SendMessageTimeout(_hwnd, WM_MOUSEWHEEL, MAKEWPARAM(0, WHEEL_DELTA), MAKELPARAM(pt.x, pt.y), SMTO_BLOCK, 2000, nullptr);
+		ret = ::SendMessageTimeout(_hwnd, OP_WM_MOUSEWHEEL, MAKEWPARAM(0, WHEEL_DELTA), MAKELPARAM(pt.x, pt.y), SMTO_BLOCK, 2000, nullptr);
 		break;
 	}
 	}

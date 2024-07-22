@@ -222,11 +222,15 @@ class test {
   }
   void do_test() {
       long hwnd = 0, subhwnd = 0, ret = 0;
-      m_op->FindWindow(L"notepad", L"", &hwnd);
-      m_op->FindWindowEx(hwnd, L"Edit", L"", &subhwnd);
+      //m_op->FindWindow(L"notepad", L"", &hwnd);
+      //m_op->FindWindowEx(hwnd, L"Edit", L"", &subhwnd);
+      m_op->FindWindow(L"Qt5156QWindowIcon",L"MuMu模拟器12", &hwnd);
+      m_op->FindWindowEx(hwnd, L"Qt5156QWindowIcon", L"MuMuPlayer", &subhwnd);
 
       m_op->BindWindow(subhwnd, L"normal", L"windows", L"normal", 0, &ret);
-      
+      m_op->Delay(2000, &ret);
+      m_op->MoveTo(639, 381, &ret);
+      m_op->LeftClick(&ret);
       std::getchar();
 
       m_op->UnBindWindow(&ret);
