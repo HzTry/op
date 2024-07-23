@@ -47,5 +47,8 @@ private:
 	int _mode;
 	int _x,_y;
 	float _dpi;//screen dpi
+
+	UINT _mouseDownState;
+
 };
 

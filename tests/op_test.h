@@ -228,11 +228,16 @@ class test {
       m_op->FindWindowEx(hwnd, L"Qt5156QWindowIcon", L"MuMuPlayer", &subhwnd);
 
       m_op->BindWindow(subhwnd, L"normal", L"windows", L"normal", 0, &ret);
-      m_op->Delay(2000, &ret);
-      m_op->MoveTo(639, 381, &ret);
-      m_op->LeftClick(&ret);
-      std::getchar();
+      m_op->Delay(1000, &ret);
+      m_op->MoveTo(639, 500, &ret);
+      m_op->LeftDown(&ret);
 
+      for (int i = 0; i < 200; i++) {
+        m_op->MoveTo(639 + i, 500, &ret);
+        m_op->Delay(10, &ret);
+      }
+
+      m_op->LeftUp(&ret);
       m_op->UnBindWindow(&ret);
 
     // m_op->FindWindow()

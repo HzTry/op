@@ -7,6 +7,7 @@
 #include "../core/opEnv.h"
 #include "../HOOK/opMessage.h"
 
+
 float opMouseWin::getDPI() {
 	HDC hdcScreen;
 	hdcScreen = CreateDCW(L"DISPLAY", NULL, NULL, NULL);
@@ -36,10 +37,9 @@ float opMouseWin::getDPI() {
 }
 
 opMouseWin::opMouseWin()
-	:_hwnd(NULL), _mode(0), _x(0), _y(0), _dpi(getDPI())
+	:_hwnd(NULL), _mode(0), _x(0), _y(0), _dpi(getDPI()),_mouseDownState(0)
 {
 }
-
 
 opMouseWin::~opMouseWin()
 {
@@ -204,11 +204,12 @@ long opMouseWin::MoveR(int rx, int ry) {
     return MoveTo(_x + rx, _y + ry);
 }
 
-
 long opMouseWin::MoveTo(int x, int y) {
 	x = x * _dpi;
 	y = y * _dpi;
 	long ret = 0;
+
+
 	switch (_mode) {
 	case INPUT_TYPE::IN_NORMAL:
 	{
@@ -237,7 +238,7 @@ long opMouseWin::MoveTo(int x, int y) {
 		break;
 	}
 	case INPUT_TYPE::IN_WINDOWS: {
-		ret = ::SendMessageTimeout(_hwnd, OP_WM_MOUSEMOVE, 0, MAKELPARAM(x, y), SMTO_BLOCK, 2000, nullptr);
+		ret = ::SendMessageTimeout(_hwnd, OP_WM_MOUSEMOVE, _mouseDownState, MAKELPARAM(x, y), SMTO_BLOCK, 2000, nullptr);
 		break;
 	}
 	}
@@ -323,6 +324,9 @@ long opMouseWin::LeftDown() {
 		break;
 	}
 	}
+	if (ret)
+		_mouseDownState = MK_LBUTTON;
+
 	return ret;
 }
 
@@ -344,6 +348,9 @@ long opMouseWin::LeftUp() {
 		break;
 	}
 	}
+
+	if (ret)
+		_mouseDownState = 0;
 	return ret;
 }
 
@@ -382,6 +389,8 @@ long opMouseWin::MiddleDown() {
 	}
 
 	}
+	if (ret)
+		_mouseDownState = MK_MBUTTON;
 	return ret;
 }
 
@@ -403,9 +412,11 @@ long opMouseWin::MiddleUp() {
 		break;
 	}
 	}
+
+	if (ret)
+		_mouseDownState = 0;
 	return ret;
 }
-
 
 long opMouseWin::RightClick() {
 	long ret = 0;
@@ -459,6 +470,9 @@ long opMouseWin::RightDown()
 		break;
 	}
 	}
+
+	if (ret)
+		_mouseDownState = MK_RBUTTON;
 	return ret;
 }
 
@@ -480,6 +494,9 @@ long opMouseWin::RightUp() {
 		break;
 	}
 	}
+
+	if (ret)
+		_mouseDownState = 0;
 	return ret;
 }
 
